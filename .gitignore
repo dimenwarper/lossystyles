@@ -1,0 +1,22 @@
+# Go
+cli/lossystyles
+cli/dist/
+
+# Python
+sdk/dist/
+sdk/*.egg-info
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+
+# Runtime
+*.sock
