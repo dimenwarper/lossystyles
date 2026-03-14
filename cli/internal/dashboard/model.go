@@ -22,6 +22,11 @@ type TickMsg time.Time
 
 const refreshInterval = 250 * time.Millisecond
 
+// PanelRect stores a panel's position and size for drag support.
+type PanelRect struct {
+	X, Y, W, H int
+}
+
 type Model struct {
 	theme     themes.Theme
 	project   string
@@ -35,6 +40,14 @@ type Model struct {
 	spinner   spinner.Model
 	messages  <-chan protocol.Message
 	quitting  bool
+
+	// Draggable/resizable panel state (Eva theme)
+	panels       [4]PanelRect // 0=top-center, 1=bottom-left, 2=bottom-right, 3=upper-left
+	panelsInit   bool         // true once default positions have been computed
+	dragging     int          // index of panel being dragged, -1 if none
+	resizing     int          // index of panel being resized, -1 if none
+	dragOffsetX  int          // mouse offset from panel's top-left corner
+	dragOffsetY  int
 }
 
 func New(msgs <-chan protocol.Message, themeName string) Model {
@@ -48,6 +61,8 @@ func New(msgs <-chan protocol.Message, themeName string) Model {
 		startTime: time.Now(),
 		spinner:   s,
 		messages:  msgs,
+		dragging:  -1,
+		resizing:  -1,
 	}
 }
 
@@ -71,6 +86,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+		if m.theme.RenderStyle == themes.StyleEva {
+			computeEvaDefaultPanels(&m)
+		}
+
+	case tea.MouseMsg:
+		if m.theme.RenderStyle == themes.StyleEva {
+			handleEvaMouse(&m, msg)
+		}
 
 	case spinner.TickMsg:
 		var cmd tea.Cmd

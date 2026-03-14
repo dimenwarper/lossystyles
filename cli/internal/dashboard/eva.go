@@ -7,26 +7,12 @@ import (
 	"strings"
 	"time"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lossystyles/cli/internal/renderers"
 )
 
-// renderEvaView renders the complete NERV HUD with rotating polytope background,
-// triangular panel arrangement, and connecting lines.
-func (m Model) renderEvaView() string {
-	canvas := renderers.NewCanvas(m.width, m.height)
-
-	// === 1. Draw background layers ===
-	// Sine waves first (behind everything)
-	drawEvaSineWaves(canvas, m.steps, m.width, m.height)
-	// Polytope on top of waves
-	renderers.DrawPolytope(canvas, m.steps, "#554422", "#887744")
-	// "02" block text in top-right corner
-	drawEva02(canvas, m.width, m.height)
-
-	// === 2. Get metrics ===
-	keys := m.sortedMetricKeys()
-
-	// === 3. Panel dimensions — squarer panels, bottom anchored low ===
+// computeEvaDefaultPanels calculates the default panel positions and sizes.
+func computeEvaDefaultPanels(m *Model) {
 	headerH := 3
 	footerH := 3
 
@@ -38,7 +24,7 @@ func (m Model) renderEvaView() string {
 		panelH = 14
 	}
 
-	// Top-center panel (main chart, same as before)
+	// Top-center panel (main chart)
 	topPanelW := panelH * 4
 	if topPanelW > m.width*2/3 {
 		topPanelW = m.width * 2 / 3
@@ -49,7 +35,7 @@ func (m Model) renderEvaView() string {
 	topX := (m.width - topPanelW) / 2
 	topY := headerH + 2
 
-	// Upper-left panel: new, narrower, same height as others
+	// Upper-left panel
 	ulPanelW := topX / 2
 	if ulPanelW < 20 {
 		ulPanelW = 20
@@ -57,7 +43,7 @@ func (m Model) renderEvaView() string {
 	ulX := 2
 	ulY := headerH + 2
 
-	// Bottom panels (same as before)
+	// Bottom panels
 	botPanelW := topPanelW * 3 / 4
 	if botPanelW < 24 {
 		botPanelW = 24
@@ -78,28 +64,125 @@ func (m Model) renderEvaView() string {
 		}
 	}
 
-	// === 4. Header ===
+	m.panels = [4]PanelRect{
+		{topX, topY, topPanelW, panelH},   // 0: top-center
+		{blX, bottomY, botPanelW, panelH}, // 1: bottom-left
+		{brX, bottomY, botPanelW, panelH}, // 2: bottom-right
+		{ulX, ulY, ulPanelW, panelH},      // 3: upper-left
+	}
+	m.panelsInit = true
+}
+
+// handleEvaMouse processes mouse events for draggable/resizable Eva panels.
+// Drag: click the top border to move. Resize: click the bottom-right corner.
+func handleEvaMouse(m *Model, msg tea.MouseMsg) {
+	if !m.panelsInit {
+		return
+	}
+
+	switch msg.Action {
+	case tea.MouseActionPress:
+		if msg.Button != tea.MouseButtonLeft {
+			return
+		}
+		for i, p := range m.panels {
+			// Bottom-right corner (3x2 grab zone) → resize
+			if msg.X >= p.X+p.W-3 && msg.X <= p.X+p.W &&
+				msg.Y >= p.Y+p.H-2 && msg.Y <= p.Y+p.H {
+				m.resizing = i
+				return
+			}
+			// Top border (top 2 rows) → drag
+			if msg.X >= p.X && msg.X < p.X+p.W && msg.Y >= p.Y && msg.Y < p.Y+2 {
+				m.dragging = i
+				m.dragOffsetX = msg.X - p.X
+				m.dragOffsetY = msg.Y - p.Y
+				return
+			}
+		}
+
+	case tea.MouseActionMotion:
+		if m.dragging >= 0 {
+			newX := msg.X - m.dragOffsetX
+			newY := msg.Y - m.dragOffsetY
+			if newX < 0 {
+				newX = 0
+			}
+			if newY < 3 {
+				newY = 3
+			}
+			p := &m.panels[m.dragging]
+			if newX+p.W > m.width {
+				newX = m.width - p.W
+			}
+			if newY+p.H > m.height-3 {
+				newY = m.height - 3 - p.H
+			}
+			p.X = newX
+			p.Y = newY
+		} else if m.resizing >= 0 {
+			p := &m.panels[m.resizing]
+			newW := msg.X - p.X + 1
+			newH := msg.Y - p.Y + 1
+			// Minimum panel size
+			if newW < 16 {
+				newW = 16
+			}
+			if newH < 6 {
+				newH = 6
+			}
+			// Clamp to screen
+			if p.X+newW > m.width {
+				newW = m.width - p.X
+			}
+			if p.Y+newH > m.height-3 {
+				newH = m.height - 3 - p.Y
+			}
+			p.W = newW
+			p.H = newH
+		}
+
+	case tea.MouseActionRelease:
+		m.dragging = -1
+		m.resizing = -1
+	}
+}
+
+// renderEvaView renders the complete NERV HUD with rotating polytope background,
+// triangular panel arrangement, and draggable panels.
+func (m Model) renderEvaView() string {
+	canvas := renderers.NewCanvas(m.width, m.height)
+
+	// === 1. Draw background layers ===
+	drawEvaSineWaves(canvas, m.steps, m.width, m.height)
+	renderers.DrawPolytope(canvas, m.steps, "#554422", "#887744")
+	drawEva02(canvas, m.width, m.height)
+
+	// === 2. Get metrics ===
+	keys := m.sortedMetricKeys()
+
+	// === 3. Header ===
 	m.drawEvaHeaderCanvas(canvas)
 
-	// === 5. Draw metric panels ===
-	// Upper-left: new 4th metric (bigger panel)
+	// === 4. Draw metric panels using stored positions ===
 	if len(keys) >= 4 {
-		m.drawEvaPanelCanvas(canvas, keys[3], ulX, ulY, ulPanelW, panelH, true)
+		p := m.panels[3]
+		m.drawEvaPanelCanvas(canvas, keys[3], p.X, p.Y, p.W, p.H, true)
 	}
-	// Top-center: first metric (main chart, same position)
 	if len(keys) >= 1 {
-		m.drawEvaPanelCanvas(canvas, keys[0], topX, topY, topPanelW, panelH, true)
+		p := m.panels[0]
+		m.drawEvaPanelCanvas(canvas, keys[0], p.X, p.Y, p.W, p.H, true)
 	}
-	// Bottom-left: second metric
 	if len(keys) >= 2 {
-		m.drawEvaPanelCanvas(canvas, keys[1], blX, bottomY, botPanelW, panelH, false)
+		p := m.panels[1]
+		m.drawEvaPanelCanvas(canvas, keys[1], p.X, p.Y, p.W, p.H, false)
 	}
-	// Bottom-right: third metric
 	if len(keys) >= 3 {
-		m.drawEvaPanelCanvas(canvas, keys[2], brX, bottomY, botPanelW, panelH, false)
+		p := m.panels[2]
+		m.drawEvaPanelCanvas(canvas, keys[2], p.X, p.Y, p.W, p.H, false)
 	}
 
-	// === 7. MAGI footer ===
+	// === 5. MAGI footer ===
 	m.drawEvaFooterCanvas(canvas)
 
 	return canvas.Render()
@@ -150,6 +233,9 @@ func (m Model) drawEvaPanelCanvas(canvas *renderers.Canvas, key string, x, y, w,
 
 	// Border
 	canvas.DrawBox(x, y, w, h, borderColor)
+
+	// Resize handle in bottom-right corner
+	canvas.Set(x+w-2, y+h-1, '◢', "#664400")
 
 	// Interior bounds for clipping
 	innerX := x + 2        // left content margin
