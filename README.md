@@ -20,7 +20,7 @@ Each theme is a genuinely different visual experience, not just a color swap:
 | `retro` | Warm amber CRT aesthetic |
 | `minimal` | Stripped-down monochrome |
 | `rainbow` | Cycling rainbow colors on everything |
-| `bio` | Gel electrophoresis lanes with smear-to-bands separation, DNA helix sparklines, per-lane colors (white/green/blue/orange) |
+| `pcr` | Gel electrophoresis lanes with smear-to-bands separation, DNA helix sparklines, per-lane colors (white/green/blue/orange) |
 | `eva` | NERV HUD with rotating icosahedron wireframe, sine wave background, block "02", MAGI system footer |
 
 ## Quick start
@@ -53,7 +53,7 @@ run.finish()
 Then in another terminal:
 
 ```bash
-./lossystyles --run-id <run-id> --theme bio
+./lossystyles --run-id <run-id> --theme pcr
 ```
 
 ## Protocol

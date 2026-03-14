@@ -112,8 +112,8 @@ func (m Model) View() string {
 	switch m.theme.RenderStyle {
 	case themes.StyleEva:
 		return m.renderEvaView()
-	case themes.StyleBio:
-		return m.renderBioView()
+	case themes.StylePCR:
+		return m.renderPCRView()
 	}
 
 	var sections []string
@@ -149,8 +149,8 @@ func (m Model) styleBorder(offset int) string {
 	switch m.theme.RenderStyle {
 	case themes.StyleRainbow:
 		return themes.Rainbowify(raw, m.steps+offset)
-	case themes.StyleBio:
-		return themes.StylizeBio(raw)
+	case themes.StylePCR:
+		return themes.StylizePCR(raw)
 	default:
 		return m.theme.Border.Render(raw)
 	}
@@ -161,7 +161,7 @@ func (m Model) styleTitle(text string) string {
 	switch m.theme.RenderStyle {
 	case themes.StyleRainbow:
 		return themes.Rainbowify(text, m.steps)
-	case themes.StyleBio:
+	case themes.StylePCR:
 		return m.theme.Title.Render("🧬 " + text)
 	default:
 		return m.theme.Title.Render(text)
@@ -178,7 +178,7 @@ func (m Model) renderHeader() string {
 		switch m.theme.RenderStyle {
 		case themes.StyleRainbow:
 			project = themes.Rainbowify(m.project, m.steps+15)
-		case themes.StyleBio:
+		case themes.StylePCR:
 			project = m.theme.Accent.Render("[" + m.project + "]")
 		default:
 			project = m.theme.Accent.Render(m.project)
@@ -220,7 +220,7 @@ func (m Model) renderCharts() string {
 		// Select chart renderer based on style
 		var chart []string
 		switch m.theme.RenderStyle {
-		case themes.StyleBio:
+		case themes.StylePCR:
 			chart = renderers.ElectrophoresisChart(values, chartWidth, chartHeight)
 		default:
 			chart = renderers.BrailleChart(values, chartWidth, chartHeight)
@@ -232,8 +232,8 @@ func (m Model) renderCharts() string {
 			switch m.theme.RenderStyle {
 			case themes.StyleRainbow:
 				styled[i] = themes.Rainbowify(line, m.steps+i*3)
-			case themes.StyleBio:
-				styled[i] = themes.StylizeBio(line)
+			case themes.StylePCR:
+				styled[i] = themes.StylizePCR(line)
 			default:
 				styled[i] = m.theme.Sparkline.Render(line)
 			}
@@ -242,7 +242,7 @@ func (m Model) renderCharts() string {
 		// Label
 		var label string
 		switch m.theme.RenderStyle {
-		case themes.StyleBio:
+		case themes.StylePCR:
 			label = m.theme.MetricKey.Render(fmt.Sprintf(" Lane %d: %s ", ki+1, key))
 		default:
 			label = m.theme.MetricKey.Render(fmt.Sprintf(" %s ", key))
@@ -273,7 +273,7 @@ func (m Model) renderMetricsTable() string {
 	// Table header
 	var histLabel string
 	switch m.theme.RenderStyle {
-	case themes.StyleBio:
+	case themes.StylePCR:
 		histLabel = "helix"
 	default:
 		histLabel = "history"
@@ -292,9 +292,9 @@ func (m Model) renderMetricsTable() string {
 		switch m.theme.RenderStyle {
 		case themes.StyleRainbow:
 			spark = themes.Rainbowify(summary.Spark, m.steps+ki*7)
-		case themes.StyleBio:
+		case themes.StylePCR:
 			helixSpark := renderers.HelixSparkline(m.metrics[key], sparkWidth)
-			spark = themes.StylizeBio(helixSpark)
+			spark = themes.StylizePCR(helixSpark)
 		default:
 			spark = m.theme.Sparkline.Render(summary.Spark)
 		}

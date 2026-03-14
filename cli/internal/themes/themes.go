@@ -14,7 +14,7 @@ type RenderStyle string
 const (
 	StyleDefault RenderStyle = ""
 	StyleRainbow RenderStyle = "rainbow"
-	StyleBio     RenderStyle = "bio"
+	StylePCR     RenderStyle = "pcr"
 	StyleEva     RenderStyle = "eva"
 )
 
@@ -161,11 +161,11 @@ var Rainbow = Theme{
 	Rainbow:     true,
 }
 
-// Bio theme — UV-illuminated gel electrophoresis aesthetic.
+// PCR theme — UV-illuminated gel electrophoresis aesthetic.
 // Phosphor-green palette with smeared band charts and DNA helix sparklines.
-var Bio = Theme{
-	Name:        "bio",
-	RenderStyle: StyleBio,
+var PCR = Theme{
+	Name:        "pcr",
+	RenderStyle: StylePCR,
 	Title:       lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#00FF88")),
 	Border:      lipgloss.NewStyle().Foreground(lipgloss.Color("#004422")),
 	MetricKey:   lipgloss.NewStyle().Foreground(lipgloss.Color("#33FFAA")),
@@ -245,12 +245,12 @@ var Themes = map[string]Theme{
 	"retro":   Retro,
 	"minimal": Minimal,
 	"rainbow": Rainbow,
-	"bio":     Bio,
+	"pcr":     PCR,
 	"eva":     Eva,
 }
 
-// BioChartStyles are pre-allocated styles for per-character bio chart coloring.
-var BioChartStyles = map[rune]lipgloss.Style{
+// PCRChartStyles are pre-allocated styles for per-character bio chart coloring.
+var PCRChartStyles = map[rune]lipgloss.Style{
 	'█': lipgloss.NewStyle().Foreground(lipgloss.Color("#00FF66")),
 	'▓': lipgloss.NewStyle().Foreground(lipgloss.Color("#00DD55")),
 	'▒': lipgloss.NewStyle().Foreground(lipgloss.Color("#00AA33")),
@@ -261,16 +261,16 @@ var BioChartStyles = map[rune]lipgloss.Style{
 	'·': lipgloss.NewStyle().Foreground(lipgloss.Color("#004422")),
 }
 
-// StylizeBio applies per-character bio coloring to a string.
-func StylizeBio(s string) string {
+// StylizePCR applies per-character bio coloring to a string.
+func StylizePCR(s string) string {
 	var b strings.Builder
 	for _, r := range s {
-		if style, ok := BioChartStyles[r]; ok {
+		if style, ok := PCRChartStyles[r]; ok {
 			b.WriteString(style.Render(string(r)))
 		} else if r == ' ' {
 			b.WriteRune(' ')
 		} else {
-			b.WriteString(BioChartStyles['·'].Render(string(r)))
+			b.WriteString(PCRChartStyles['·'].Render(string(r)))
 		}
 	}
 	return b.String()

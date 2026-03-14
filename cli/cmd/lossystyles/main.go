@@ -15,7 +15,7 @@ import (
 )
 
 func main() {
-	theme := flag.String("theme", "dark", "theme: dark, neon, retro, minimal, rainbow, bio, eva")
+	theme := flag.String("theme", "dark", "theme: dark, neon, retro, minimal, rainbow, pcr, eva")
 	runID := flag.String("run-id", "", "run ID to listen for (creates socket at /tmp/lossystyles-{run-id}.sock)")
 	demo := flag.Bool("demo", false, "run a demo with synthetic training data")
 	flag.Parse()

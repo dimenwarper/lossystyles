@@ -10,15 +10,15 @@ import (
 	"github.com/lossystyles/cli/internal/renderers"
 )
 
-// renderBioView renders a gel electrophoresis dashboard — vertical lanes,
+// renderPCRView renders a gel electrophoresis dashboard — vertical lanes,
 // horizontal bands, marker ladders on the edges.
-func (m Model) renderBioView() string {
+func (m Model) renderPCRView() string {
 	canvas := renderers.NewCanvas(m.width, m.height)
 
-	keys := m.bioSortedKeys()
+	keys := m.pcrSortedKeys()
 
 	// === Header ===
-	m.drawBioHeader(canvas)
+	m.drawPCRHeader(canvas)
 
 	// === Gel panel ===
 	gelX := 1
@@ -32,13 +32,13 @@ func (m Model) renderBioView() string {
 	m.drawGelPanel(canvas, keys, gelX, gelY, gelW, gelH)
 
 	// === Footer with stats ===
-	m.drawBioFooter(canvas, keys)
+	m.drawPCRFooter(canvas, keys)
 
 	return canvas.Render()
 }
 
-// drawBioHeader draws the bio theme header.
-func (m Model) drawBioHeader(canvas *renderers.Canvas) {
+// drawPCRHeader draws the bio theme header.
+func (m Model) drawPCRHeader(canvas *renderers.Canvas) {
 	elapsed := time.Since(m.startTime).Round(time.Second)
 	borderColor := "#006633"
 
@@ -364,8 +364,8 @@ func bandCharColor(intensity float64) (rune, string) {
 	return bandCharColorPalette(intensity, laneColors[1]) // green palette
 }
 
-// drawBioFooter draws a stats line at the bottom.
-func (m Model) drawBioFooter(canvas *renderers.Canvas, keys []string) {
+// drawPCRFooter draws a stats line at the bottom.
+func (m Model) drawPCRFooter(canvas *renderers.Canvas, keys []string) {
 	y := m.height - 4
 	borderColor := "#004422"
 	canvas.DrawBox(0, y, m.width, 4, borderColor)
@@ -394,8 +394,8 @@ func (m Model) drawBioFooter(canvas *renderers.Canvas, keys []string) {
 	}
 }
 
-// bioSortedKeys returns metric keys sorted for the bio layout.
-func (m Model) bioSortedKeys() []string {
+// pcrSortedKeys returns metric keys sorted for the bio layout.
+func (m Model) pcrSortedKeys() []string {
 	keys := make([]string, 0, len(m.metrics))
 	for k := range m.metrics {
 		keys = append(keys, k)
