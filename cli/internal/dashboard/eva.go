@@ -420,43 +420,83 @@ func (m Model) sortedMetricKeys() []string {
 	return keys
 }
 
-// drawEvaSineWaves draws layered sine waves across the background,
-// inspired by the Eva-02 oscilloscope/waveform aesthetic.
+// waveGradientColor returns a color along a blue → red → orange gradient.
+// t is in [0,1]: 0=blue, 0.5=red, 1=orange.
+func waveGradientColor(t float64) string {
+	// Clamp
+	if t < 0 {
+		t = 0
+	}
+	if t > 1 {
+		t = 1
+	}
+
+	var r, g, b float64
+	if t < 0.5 {
+		// Blue (#2244FF) → Red (#FF2200)
+		p := t / 0.5
+		r = 0x22 + p*(0xFF-0x22)
+		g = 0x44 + p*(0x22-0x44)
+		b = 0xFF + p*(0x00-0xFF)
+	} else {
+		// Red (#FF2200) → Orange (#FFAA00)
+		p := (t - 0.5) / 0.5
+		r = 0xFF
+		g = 0x22 + p*(0xAA-0x22)
+		b = 0x00
+	}
+
+	return fmt.Sprintf("#%02X%02X%02X", int(r), int(g), int(b))
+}
+
+// drawEvaSineWaves draws layered sine waves across the background
+// with a dynamic blue → red → orange gradient that shifts over time.
 func drawEvaSineWaves(canvas *renderers.Canvas, step, width, height int) {
-	// Multiple sine waves with different frequencies, amplitudes, and phases
-	// They scroll horizontally based on step count
 	type wave struct {
-		freq      float64 // frequency multiplier
-		amp       float64 // amplitude as fraction of height
-		phase     float64 // phase offset
-		speed     float64 // scroll speed
-		color     string
-		ch        rune
+		freq  float64
+		amp   float64
+		phase float64
+		speed float64
+		ch    rune
 	}
 
 	waves := []wave{
-		{freq: 0.04, amp: 0.15, phase: 0.0, speed: 0.08, color: "#FF4400", ch: '~'},
-		{freq: 0.06, amp: 0.12, phase: 1.0, speed: 0.06, color: "#DD2200", ch: '~'},
-		{freq: 0.03, amp: 0.18, phase: 2.0, speed: 0.10, color: "#BB1800", ch: '~'},
-		{freq: 0.08, amp: 0.08, phase: 3.5, speed: 0.12, color: "#FF4400", ch: '~'},
-		{freq: 0.05, amp: 0.10, phase: 5.0, speed: 0.04, color: "#DD2200", ch: '~'},
-		{freq: 0.07, amp: 0.14, phase: 4.0, speed: 0.07, color: "#CC2200", ch: '~'},
-		{freq: 0.09, amp: 0.06, phase: 2.5, speed: 0.09, color: "#BB1800", ch: '~'},
+		{freq: 0.04, amp: 0.15, phase: 0.0, speed: 0.08, ch: '~'},
+		{freq: 0.06, amp: 0.12, phase: 1.0, speed: 0.06, ch: '~'},
+		{freq: 0.03, amp: 0.18, phase: 2.0, speed: 0.10, ch: '~'},
+		{freq: 0.08, amp: 0.08, phase: 3.5, speed: 0.12, ch: '~'},
+		{freq: 0.05, amp: 0.10, phase: 5.0, speed: 0.04, ch: '~'},
+		{freq: 0.07, amp: 0.14, phase: 4.0, speed: 0.07, ch: '~'},
+		{freq: 0.09, amp: 0.06, phase: 2.5, speed: 0.09, ch: '~'},
 	}
 
 	centerY := float64(height) * 0.55
+	// Gradient shift scrolls over time
+	gradientShift := float64(step) * 0.015
 
-	for _, w := range waves {
+	for wi, w := range waves {
 		t := float64(step) * w.speed
+		// Each wave has a slight phase offset in the gradient
+		waveOffset := float64(wi) * 0.12
 		for x := 0; x < width; x++ {
 			y := centerY + w.amp*float64(height)*math.Sin(w.freq*float64(x)+w.phase+t)
 			iy := int(math.Round(y))
-			// Double-stroke: draw main line and a second stroke offset by 1
+
+			// Gradient position: based on x across screen + time shift + per-wave offset
+			gt := float64(x)/float64(width) + gradientShift + waveOffset
+			// Wrap to [0,1] with ping-pong so it cycles smoothly
+			gt = gt - math.Floor(gt)
+			if gt > 0.5 {
+				gt = 1.0 - gt
+			}
+			gt *= 2.0 // back to [0,1]
+			color := waveGradientColor(gt)
+
 			if iy >= 0 && iy < height {
-				canvas.Set(x, iy, w.ch, w.color)
+				canvas.Set(x, iy, w.ch, color)
 			}
 			if iy+1 >= 0 && iy+1 < height {
-				canvas.Set(x, iy+1, '∼', w.color)
+				canvas.Set(x, iy+1, '∼', color)
 			}
 		}
 	}
